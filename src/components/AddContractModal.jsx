@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Address } from '@stellar/stellar-sdk';
 
 /**
  * AddContractModal — Form for adding a new contract to monitor.
@@ -41,6 +42,14 @@ export default function AddContractModal({ isOpen, onClose, onAdd }) {
         // Basic Stellar address validation (C... format, 56 chars)
         if (trimmedId.length !== 56 || !trimmedId.startsWith('C')) {
             setError('Invalid Contract ID. Must be a 56-character string starting with "C".');
+            return;
+        }
+
+        // Validate address checksum using the SDK
+        try {
+            new Address(trimmedId);
+        } catch {
+            setError('Invalid Contract ID. The address checksum is incorrect — please double-check the address.');
             return;
         }
 

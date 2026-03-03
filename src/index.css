@@ -880,6 +880,72 @@ body::before {
   50% { box-shadow: 0 0 12px var(--status-healthy); }
 }
 
+/* ---------- Extend TTL Modal ---------- */
+.extend-modal {
+  max-width: 460px;
+}
+
+.extend-contract-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-glass);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.extend-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.extend-value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.extend-value.mono {
+  font-family: var(--font-mono);
+  color: var(--text-accent);
+}
+
+.extend-presets {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.extend-preset-btn {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.extend-preset-btn:hover {
+  background: var(--accent-purple-dim);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: var(--accent-purple);
+}
+
+.extend-preset-btn.active {
+  background: var(--accent-purple-dim);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+
 /* ---------- Toast / Notification ---------- */
 .toast-container {
   position: fixed;

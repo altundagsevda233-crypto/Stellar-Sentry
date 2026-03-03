@@ -18,7 +18,7 @@ import {
  */
 
 const REFRESH_INTERVAL_MS = 30_000; // 30 seconds
-const DEFAULT_EXTEND_LEDGERS = 518_400; // ~30 days
+const LEDGERS_PER_DAY = 17_280; // ~24h at 5s per ledger
 
 export default function App() {
     // --- Network state ---
@@ -45,6 +45,13 @@ export default function App() {
 
     // --- Modal state ---
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // --- Extend modal state ---
+    const [extendModal, setExtendModal] = useState({
+        open: false,
+        contractId: null,
+        days: 30,
+    });
 
     // --- Wallet state ---
     const [walletState, setWalletState] = useState({
@@ -170,23 +177,33 @@ export default function App() {
         }
     }
 
-    async function handleExtendTTL(contractId) {
+    function handleExtendTTL(contractId) {
         if (!walletState.publicKey) {
             showToast('Please connect your wallet first', 'error');
             return;
         }
+        setExtendModal({ open: true, contractId, days: 30 });
+    }
 
-        showToast('Preparing TTL extension transaction...', 'success');
+    async function handleExtendSubmit() {
+        const { contractId, days } = extendModal;
+        setExtendModal((prev) => ({ ...prev, open: false }));
+
+        const data = contractData[contractId];
+        const instanceEntry = data?.entries?.find((e) => e.keyName === 'Contract Instance');
+        const currentRemaining = instanceEntry?.remainingLedgers || 0;
+        const extendToLedgers = currentRemaining + (days * LEDGERS_PER_DAY);
+
+        showToast(`Extending TTL by ${days} days...`, 'success');
         const result = await extendContractTTL(
             contractId,
-            DEFAULT_EXTEND_LEDGERS,
+            extendToLedgers,
             walletState.publicKey
         );
 
         if (result.success) {
-            showToast(`TTL extended! TX: ${result.txHash?.substring(0, 12)}...`);
-            // Refresh data after extension
-            refreshContractData();
+            showToast(`TTL extended by ${days} days! TX: ${result.txHash?.substring(0, 12)}...`);
+            setTimeout(() => refreshContractData(), 3000);
         } else {
             showToast(`Extension failed: ${result.error}`, 'error');
         }
@@ -292,6 +309,74 @@ export default function App() {
                 onClose={() => setIsModalOpen(false)}
                 onAdd={handleAddContract}
             />
+
+            {/* Extend TTL Modal */}
+            {extendModal.open && (
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setExtendModal((p) => ({ ...p, open: false }))}>
+                    <div className="modal-content extend-modal">
+                        <div className="modal-header">
+                            <h2 className="modal-title">⏱ Extend TTL</h2>
+                            <button className="modal-close" onClick={() => setExtendModal((p) => ({ ...p, open: false }))}>✕</button>
+                        </div>
+
+                        <div className="extend-contract-info">
+                            <span className="extend-label">Contract</span>
+                            <span className="extend-value mono">
+                                {extendModal.contractId?.substring(0, 8)}...{extendModal.contractId?.substring(extendModal.contractId.length - 8)}
+                            </span>
+                        </div>
+
+                        {(() => {
+                            const data = contractData[extendModal.contractId];
+                            const inst = data?.entries?.find((e) => e.keyName === 'Contract Instance');
+                            return inst && !inst.error ? (
+                                <div className="extend-contract-info">
+                                    <span className="extend-label">Current Remaining</span>
+                                    <span className="extend-value">{inst.estimatedTimeLeft} ({inst.remainingLedgers?.toLocaleString()} ledgers)</span>
+                                </div>
+                            ) : null;
+                        })()}
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="extend-days-input">Days to Add</label>
+                            <input
+                                id="extend-days-input"
+                                className="form-input"
+                                type="number"
+                                min="1"
+                                max="365"
+                                value={extendModal.days}
+                                onChange={(e) => setExtendModal((p) => ({ ...p, days: Math.max(1, parseInt(e.target.value) || 1) }))}
+                                autoFocus
+                            />
+                            <div className="extend-presets">
+                                {[7, 30, 90, 180, 365].map((d) => (
+                                    <button
+                                        key={d}
+                                        type="button"
+                                        className={`extend-preset-btn ${extendModal.days === d ? 'active' : ''}`}
+                                        onClick={() => setExtendModal((p) => ({ ...p, days: d }))}
+                                    >
+                                        {d}d
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="form-hint">
+                                ≈ {(extendModal.days * LEDGERS_PER_DAY).toLocaleString()} ledgers will be added
+                            </div>
+                        </div>
+
+                        <div className="form-actions">
+                            <button className="btn btn-secondary" onClick={() => setExtendModal((p) => ({ ...p, open: false }))}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-primary" onClick={handleExtendSubmit}>
+                                Extend by {extendModal.days} Days
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notifications */}
             {toasts.length > 0 && (

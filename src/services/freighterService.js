@@ -19,6 +19,7 @@ import {
 
 import {
     TransactionBuilder,
+    SorobanDataBuilder,
     Networks,
     Operation,
     rpc,
@@ -100,6 +101,11 @@ export async function extendContractTTL(contractId, extendToLedgers, signerPubli
             })
         );
 
+        // Build the soroban data with footprint using SorobanDataBuilder
+        const sorobanData = new SorobanDataBuilder()
+            .setFootprint([ledgerKey], [])
+            .build();
+
         // Build the transaction
         const tx = new TransactionBuilder(account, {
             fee: '100000', // 0.01 XLM base fee — simulation will adjust
@@ -110,21 +116,7 @@ export async function extendContractTTL(contractId, extendToLedgers, signerPubli
                     extendTo: extendToLedgers,
                 })
             )
-            .setSorobanData(
-                new xdr.SorobanTransactionData({
-                    resources: new xdr.SorobanResources({
-                        footprint: new xdr.LedgerFootprint({
-                            readOnly: [ledgerKey],
-                            readWrite: [],
-                        }),
-                        instructions: 0,
-                        readBytes: 0,
-                        writeBytes: 0,
-                    }),
-                    resourceFee: xdr.Int64.fromString('0'),
-                    ext: xdr.ExtensionPoint.void0(),
-                })
-            )
+            .setSorobanData(sorobanData)
             .setTimeout(300)
             .build();
 
@@ -152,8 +144,12 @@ export async function extendContractTTL(contractId, extendToLedgers, signerPubli
         }
 
         // Poll for completion
-        let result = sendResponse;
-        while (result.status === 'PENDING') {
+        // After sendTransaction, we poll getTransaction which returns:
+        //   'NOT_FOUND' — still processing
+        //   'SUCCESS'   — completed successfully
+        //   'FAILED'    — transaction failed
+        let result = await server.getTransaction(sendResponse.hash);
+        while (result.status === 'NOT_FOUND') {
             await new Promise((resolve) => setTimeout(resolve, 2000));
             result = await server.getTransaction(sendResponse.hash);
         }
