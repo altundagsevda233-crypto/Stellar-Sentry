@@ -1,7 +1,7 @@
 {
   "name": "stellar-sentry",
   "private": true,
-  "homepage": "https://altundagsevda233-crypto.github.io/Stellar-Sentry",
+  "homepage": "https://stellar-sentry.vercel.app",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
